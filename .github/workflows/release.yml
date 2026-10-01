@@ -1,0 +1,59 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/setup
+      - name: Check tag and versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/versions.mjs $env:RELEASE_TAG
+      - name: Validate frontend and Rust
+        run: pnpm validate
+      - name: Test desktop persistence
+        run: |
+          pnpm tauri build --debug --no-bundle
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm test:desktop
+      - name: Configure signed updates
+        env:
+          TAURI_SIGNING_PUBLIC_KEY: ${{ vars.TAURI_SIGNING_PUBLIC_KEY }}
+        run: node scripts/updater-config.mjs
+      - name: Build release executable
+        run: pnpm tauri build --no-bundle --config src-tauri/tauri.updater.conf.json
+      - name: Test release startup
+        run: pnpm test:desktop:release
+      - name: Build and upload signed installer
+        uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          args: --config src-tauri/tauri.updater.conf.json
+          tagName: ${{ github.ref_name }}
+          releaseName: Resonance ${{ github.ref_name }}
+          releaseBody: |
+            ## Download
+
+            Download the Windows x64 setup executable below. It includes everything needed to run Resonance.
+
+            Existing signed installations can update from Settings.
+          releaseDraft: true
+          prerelease: false
+      - name: Publish completed release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release edit $env:RELEASE_TAG --draft=false

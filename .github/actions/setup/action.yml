@@ -1,0 +1,19 @@
+name: Set up Resonance
+description: Install the Windows build toolchain and locked dependencies.
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: '24'
+        cache: pnpm
+    - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      with:
+        components: rustfmt, clippy
+        targets: x86_64-pc-windows-msvc
+    - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
+      with:
+        workspaces: src-tauri -> target
+    - run: pnpm install --frozen-lockfile
+      shell: pwsh
