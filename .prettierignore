@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+dist
+node_modules
+src-tauri/target
+src-tauri/gen
+src-tauri/Cargo.lock
+artifacts
+src-tauri/tauri.updater.conf.json

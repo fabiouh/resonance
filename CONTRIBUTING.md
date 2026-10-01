@@ -1,19 +1,25 @@
 # Contributing
 
-Resonance is in early development. Application source and build commands are not yet available.
-
 ## Setup
 
-Clone the repository and create a branch from `main`. Keep changes focused and avoid unrelated formatting or dependency updates.
+Use Windows x64 with Node.js 24, pnpm 10, stable Rust, Visual Studio's C++ desktop workload, a Windows SDK, and WebView2. Clone the repository, branch from `main`, then run `pnpm install --frozen-lockfile` and `pnpm tauri dev`.
 
-## Validation
+## Development and testing
 
-Run the format, lint, typecheck, test, and build commands provided by the components you change. Include relevant regression tests for behavior changes. Until build tooling is added, check patches with `git diff --check` and review documentation links and workflow syntax.
+- `pnpm format` and `cargo fmt --manifest-path src-tauri/Cargo.toml` format the source.
+- `pnpm validate` runs frontend formatting, Svelte/TypeScript checks, linting, unit tests, the frontend build, Rust formatting, Clippy, and Rust tests.
+- `pnpm tauri build --debug --no-bundle` followed by `pnpm test:desktop` checks the native window, local playlists, and settings. Close other Resonance instances first. Test profiles live in the temporary directory.
+- `pnpm test:desktop --online` additionally checks public YouTube metadata, playback, and listening history. It needs network access and is excluded from CI to avoid provider availability affecting offline checks.
+- `pnpm tauri build` produces the Windows installer. `pnpm test:desktop:release` checks its release executable without modifying library content.
 
-Never include credentials, account data, local configuration, or build outputs. Inspect staged changes before committing.
+Tests use isolated fixtures. Never add sample playlists or placeholder statistics to production paths. The native debug test profile override is unavailable in release builds.
+
+Generate application icons from `assets/icon.svg` with `pnpm tauri icon assets/icon.svg`. Commit only the configured Windows icon files.
 
 ## Pull requests
 
-Explain the problem, the resulting behavior, and how the change was verified. Include screenshots for visible interface changes. Use concise conventional commit messages, such as `fix: preserve playlist ordering`.
+Keep changes focused. Explain the problem, resulting behavior, and validation; include screenshots for interface changes. Add regression tests for changes to synchronization, ownership, authentication, and persistence.
 
-Discuss substantial product changes in an issue before starting work. Report vulnerabilities using [the security policy](SECURITY.md).
+Use scoped conventional commits, such as `fix(sync): preserve shared tracks` or `chore(deps): update dependencies`. Inspect staged changes for credentials, personal data, build output, and unrelated modifications before committing.
+
+Discuss substantial product changes in an issue before starting work. Report vulnerabilities using [the security policy](SECURITY.md). Release maintainers should follow [the release guide](docs/releases.md).
