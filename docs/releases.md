@@ -23,7 +23,7 @@ Updater signing does not provide Windows Authenticode publisher identity. Config
 1. Ensure `main` is clean, pushed, and synchronized with `origin/main`, and that its GitHub build passed.
 2. Review changes and verify Google sign-in, playlist synchronization, settings, curation, and Discord against configured accounts. Confirm that no credentials or personal data are staged.
 3. Run `pnpm release patch`, `minor`, or `major` on Windows. The command checks formatting, linting, types, tests, and the frontend build before and after the version bump. It builds an NSIS installer and smoke-tests the release executable before committing and tagging.
-4. Watch the Release workflow. It validates the tag against all manifests, runs native smoke tests, builds the signed installer, and uploads the installer, signature, and updater metadata to a draft release. The release is published only after those steps succeed.
+4. Watch the Release workflow. It validates the tag against all manifests, runs native smoke tests, builds the signed installer, and uploads the installer, signature, and updater metadata to a draft release. Installation, reinstallation, startup, and uninstallation are checked on the disposable runner before publishing the release.
 5. Verify the published installer and add concise, user-facing release notes describing the changes.
 
 The version command permits only version-field additions in its staged diff. If validation fails, it leaves reviewable working changes and creates no tag. If an atomic push fails, the local commit and tag remain; resolve the push failure without rerunning the version bump or rewriting published tags.

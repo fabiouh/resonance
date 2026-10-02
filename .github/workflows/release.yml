@@ -52,6 +52,8 @@ jobs:
             Existing signed installations can update from Settings.
           releaseDraft: true
           prerelease: false
+      - name: Test installation and uninstallation
+        run: ./scripts/test-installer.ps1 -Installer (Get-Item src-tauri/target/release/bundle/nsis/*-setup.exe).FullName
       - name: Publish completed release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

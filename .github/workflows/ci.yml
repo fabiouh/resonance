@@ -29,6 +29,9 @@ jobs:
       - name: Test release startup
         if: github.event_name == 'push'
         run: pnpm test:desktop:release
+      - name: Test installation and uninstallation
+        if: github.event_name == 'push'
+        run: ./scripts/test-installer.ps1 -Installer (Get-Item src-tauri/target/release/bundle/nsis/*-setup.exe).FullName
       - name: Upload Windows installer
         if: github.event_name == 'push'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

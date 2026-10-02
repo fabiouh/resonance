@@ -9,13 +9,18 @@ import { createServer } from 'node:net';
 if (process.platform !== 'win32')
   throw new Error('Desktop smoke tests require Windows.');
 const release = process.argv.includes('--release');
+const binaryArgument = process.argv.indexOf('--binary');
+if (binaryArgument >= 0 && !process.argv[binaryArgument + 1])
+  throw new Error('--binary requires an executable path.');
 const profile = await mkdtemp(join(tmpdir(), 'resonance-smoke-'));
 const server = createServer();
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
 await new Promise((resolve) => server.close(resolve));
 const binary = resolve(
-  `src-tauri/target/${release ? 'release' : 'debug'}/resonance.exe`,
+  binaryArgument >= 0
+    ? process.argv[binaryArgument + 1]
+    : `src-tauri/target/${release ? 'release' : 'debug'}/resonance.exe`,
 );
 const child = spawn(binary, [], {
   windowsHide: true,
@@ -27,6 +32,7 @@ const child = spawn(binary, [], {
   stdio: 'ignore',
 });
 let launchError;
+const stopped = new Promise((resolve) => child.once('close', resolve));
 child.on('error', (error) => {
   launchError = error;
 });
@@ -77,6 +83,55 @@ try {
     await expect(
       page.getByRole('heading', { name: 'Evening rotation' }),
     ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Rename playlist', exact: true })
+      .click();
+    await page
+      .getByRole('dialog')
+      .getByLabel('Name', { exact: true })
+      .fill('Evening collection');
+    await page.getByRole('button', { name: 'Save name', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Evening collection' }),
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Listening history', exact: true })
+      .click();
+    await page.getByRole('button', { name: /Google history/ }).click();
+    const historyFile = {
+      name: 'watch-history.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify([
+          {
+            title: 'Watched Imported example',
+            titleUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+            time: '2024-01-01T12:00:00.123Z',
+          },
+        ]),
+      ),
+    };
+    await page
+      .getByLabel('Google Takeout history file')
+      .setInputFiles(historyFile);
+    await expect(
+      page.getByRole('status').filter({ hasText: '1 events imported' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Imported example', { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByLabel('Google Takeout history file')
+      .setInputFiles(historyFile);
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: '0 events imported; 1 duplicates' }),
+    ).toBeVisible();
+    await page
+      .getByRole('navigation', { name: 'Playlists', exact: true })
+      .getByRole('button', { name: 'Evening collection' })
+      .click();
     if (process.argv.includes('--online')) {
       await page
         .getByRole('button', { name: 'Add track', exact: true })
@@ -130,6 +185,47 @@ try {
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page.getByLabel('Background interval')).toHaveValue('30');
     await page
+      .getByRole('button', { name: 'Listening history', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: 'Google history (1)', exact: true })
+      .click();
+    await expect(
+      page.getByText('Imported example', { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Clear history', exact: true })
+      .click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Clear history', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Google history (0)', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('No imported watch events yet.', { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole('navigation', { name: 'Playlists', exact: true })
+      .getByRole('button', { name: 'Evening collection' })
+      .click();
+    await page
+      .getByRole('button', { name: 'Delete playlist', exact: true })
+      .click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Delete playlist', exact: true })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Your library', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Playlists', exact: true })
+        .getByRole('button'),
+    ).toHaveCount(0);
+    await page
       .getByRole('button', { name: 'Library', exact: false })
       .first()
       .click();
@@ -144,4 +240,5 @@ try {
 } finally {
   await browser?.close();
   if (child.exitCode === null) child.kill();
+  await stopped;
 }
