@@ -25,7 +25,7 @@ tokio = { version = "1", features = ["sync", "net", "io-util", "time"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 url = "2"
 uuid = { version = "1", features = ["v4"] }
-sha2 = "0.10"
+sha2 = "0.11"
 base64 = "0.22"
 keyring = { version = "3", features = ["windows-native"] }
 open = "5"
