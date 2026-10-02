@@ -1,6 +1,9 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { nextVersion, versions } from './versions.mjs';
+import { loadEnvironment } from './environment.mjs';
+
+loadEnvironment();
 
 function git(...args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();

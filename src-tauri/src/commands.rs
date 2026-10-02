@@ -12,6 +12,7 @@ use tauri::{Emitter, Manager, State};
 use tokio::sync::Mutex;
 
 pub struct AppState {
+    pub config: crate::config::Config,
     pub core: Mutex<Core>,
     pub discord: Mutex<DiscordClient>,
     pub signing_in: Mutex<()>,
@@ -26,6 +27,7 @@ pub struct Snapshot {
     connected: bool,
     sync_error: Option<String>,
     updater_configured: bool,
+    google_secret_configured: bool,
 }
 
 #[tauri::command]
@@ -36,6 +38,10 @@ pub async fn snapshot(app: tauri::AppHandle, state: State<'_, AppState>) -> Resu
         connected: !auth::load()?.refresh_token.is_empty(),
         sync_error: core.sync_error.clone(),
         updater_configured: app.config().plugins.0.contains_key("updater"),
+        google_secret_configured: state
+            .config
+            .client_secret(&core.library.settings.client_id)
+            .is_some(),
     })
 }
 
@@ -89,7 +95,11 @@ pub async fn sign_in(client_secret: String, state: State<'_, AppState>) -> Resul
         ));
     }
     let secret = if client_secret.is_empty() {
-        auth::load()?.client_secret
+        state
+            .config
+            .client_secret(&id)
+            .map(String::from)
+            .unwrap_or(auth::load()?.client_secret)
     } else {
         client_secret
     };

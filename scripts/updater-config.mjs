@@ -1,4 +1,7 @@
 import { writeFileSync } from 'node:fs';
+import { loadEnvironment } from './environment.mjs';
+
+loadEnvironment();
 
 const key = process.env.TAURI_SIGNING_PUBLIC_KEY?.trim();
 if (!key)

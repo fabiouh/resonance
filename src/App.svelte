@@ -279,6 +279,7 @@
           settings={data.library.settings}
           connected={data.connected}
           updaterConfigured={data.updaterConfigured}
+          googleSecretConfigured={data.googleSecretConfigured}
           {run}
           notify={report}
         />

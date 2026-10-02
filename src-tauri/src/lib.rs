@@ -1,5 +1,6 @@
 mod auth;
 mod commands;
+mod config;
 mod error;
 mod library;
 mod model;
@@ -40,9 +41,12 @@ pub fn run() {
                 .unwrap_or(directory);
             std::fs::create_dir_all(&directory)?;
             let store = store::Store::open(&directory.join("library.sqlite"))?;
-            let library = store.load()?;
+            let mut library = store.load()?;
+            let config = config::Config::from_env();
+            config.apply_defaults(&mut library.settings);
             let close_to_tray = std::sync::atomic::AtomicBool::new(library.settings.close_to_tray);
             app.manage(AppState {
+                config,
                 core: Mutex::new(library::Core {
                     library,
                     store,

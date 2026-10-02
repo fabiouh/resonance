@@ -8,12 +8,14 @@
     settings,
     connected,
     updaterConfigured,
+    googleSecretConfigured,
     run,
     notify,
   }: {
     settings: Settings;
     connected: boolean;
     updaterConfigured: boolean;
+    googleSecretConfigured: boolean;
     run: (action: () => Promise<void>, success?: string) => Promise<boolean>;
     notify: (message: string) => void;
   } = $props();
@@ -96,7 +98,9 @@
         >Desktop OAuth client secret<input
           type="password"
           bind:value={clientSecret}
-          placeholder="Stored in Windows Credential Manager"
+          placeholder={googleSecretConfigured
+            ? 'Configured in environment; leave blank to use it'
+            : 'Stored in Windows Credential Manager'}
           autocomplete="off"
         /></label
       >{/if}
@@ -106,11 +110,15 @@
       testing. No credentials are bundled with Resonance.
     </p>
     {#if connected}<button
-        onclick={() =>
-          run(
-            () => call('disconnect'),
-            'Google disconnected. Cached playlists are now local and rules are paused.',
-          )}>Disconnect Google</button
+        onclick={async () => {
+          if (
+            await run(
+              () => call('disconnect'),
+              'Google disconnected. Cached playlists are now local and rules are paused.',
+            )
+          )
+            form.syncMinutes = 0;
+        }}>Disconnect Google</button
       >{:else}<button class="primary" onclick={signIn}
         >Sign in with Google</button
       >{/if}

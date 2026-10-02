@@ -48,6 +48,10 @@ Keyboard shortcuts: `Ctrl+K` searches, `Ctrl+N` creates a playlist, `Space` togg
 
 ## Configuration
 
+Copy `.env.example` to `.env` for optional development defaults. `pnpm tauri` and the release scripts load it without overriding existing process environment variables. Saved application settings take precedence. Installed applications use Settings or their process environment and do not search the disk for `.env` files.
+
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `DISCORD_APPLICATION_ID` configure native integrations. The secret is used only with its matching client ID and is stored in Credential Manager after sign-in. None of these variables are injected into the frontend bundle. Signing variables are described in [the release guide](docs/releases.md). Keep `.env` private; the example contains no credentials.
+
 ### Google
 
 Local playlists and public video playback work without a Google connection.

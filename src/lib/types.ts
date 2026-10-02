@@ -48,6 +48,7 @@ export interface Snapshot {
   connected: boolean;
   syncError: string | null;
   updaterConfigured: boolean;
+  googleSecretConfigured: boolean;
 }
 
 export interface PlaylistDiff {
