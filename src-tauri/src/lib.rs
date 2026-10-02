@@ -2,6 +2,7 @@ mod auth;
 mod commands;
 mod config;
 mod error;
+mod history;
 mod library;
 mod model;
 mod presence;
@@ -105,6 +106,7 @@ pub fn run() {
             commands::disconnect,
             commands::create_playlist,
             commands::delete_playlist,
+            commands::rename_playlist,
             commands::add_track,
             commands::remove_track,
             commands::save_rule,
@@ -113,6 +115,8 @@ pub fn run() {
             commands::sync_library,
             commands::playback_tick,
             commands::clear_history,
+            commands::import_history,
+            commands::imported_history,
             commands::open_youtube,
         ])
         .run(tauri::generate_context!())

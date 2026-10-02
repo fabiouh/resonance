@@ -11,6 +11,9 @@
   --line: #29312c;
   --surface: #191f1b;
 }
+.history-tabs {
+  margin-bottom: 24px;
+}
 * {
   box-sizing: border-box;
 }

@@ -28,12 +28,14 @@ pub struct Snapshot {
     sync_error: Option<String>,
     updater_configured: bool,
     google_secret_configured: bool,
+    imported_history_count: i64,
 }
 
 #[tauri::command]
 pub async fn snapshot(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<Snapshot> {
     let core = state.core.lock().await;
     Ok(Snapshot {
+        imported_history_count: core.store.history_count()?,
         library: core.library.clone(),
         connected: !auth::load()?.refresh_token.is_empty(),
         sync_error: core.sync_error.clone(),
@@ -177,10 +179,39 @@ pub async fn create_playlist(name: String, remote: bool, state: State<'_, AppSta
 }
 
 #[tauri::command]
-pub async fn delete_playlist(id: String, state: State<'_, AppState>) -> Result<()> {
+pub async fn rename_playlist(id: String, name: String, state: State<'_, AppState>) -> Result<()> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > 150 {
+        return Err(message("Use a playlist name between 1 and 150 characters."));
+    }
     let mut core = state.core.lock().await;
-    if core.playlist(&id)?.remote_id.is_some() {
-        return Err(message("Manage deletion of YouTube playlists on YouTube."));
+    if let Some(remote_id) = &core.playlist(&id)?.remote_id {
+        YoutubeClient::connect(&core.library.settings.client_id)
+            .await?
+            .rename_playlist(remote_id, name)
+            .await?;
+    }
+    let mut next = core.library.clone();
+    next.playlists
+        .iter_mut()
+        .find(|playlist| playlist.id == id)
+        .unwrap()
+        .name = name.into();
+    core.commit(next)
+}
+
+#[tauri::command]
+pub async fn delete_playlist(
+    id: String,
+    confirmation: String,
+    state: State<'_, AppState>,
+) -> Result<()> {
+    let mut core = state.core.lock().await;
+    let playlist = core.playlist(&id)?;
+    if playlist.remote_id.is_some() && confirmation != playlist.name {
+        return Err(message(
+            "Type the playlist name exactly to confirm deletion from YouTube.",
+        ));
     }
     if core
         .library
@@ -191,6 +222,12 @@ pub async fn delete_playlist(id: String, state: State<'_, AppState>) -> Result<(
         return Err(message(
             "Remove rules referencing this playlist before deleting it.",
         ));
+    }
+    if let Some(remote_id) = &playlist.remote_id {
+        YoutubeClient::connect(&core.library.settings.client_id)
+            .await?
+            .delete_playlist(remote_id)
+            .await?;
     }
     let mut next = core.library.clone();
     next.playlists.retain(|p| p.id != id);
@@ -347,7 +384,36 @@ pub async fn clear_history(state: State<'_, AppState>) -> Result<()> {
     let mut core = state.core.lock().await;
     let mut next = core.library.clone();
     next.listening.clear();
-    core.commit(next)
+    core.store.clear_history(&next)?;
+    core.library = next;
+    Ok(())
+}
+
+#[derive(Serialize)]
+pub struct ImportResult {
+    imported: usize,
+    duplicates: usize,
+    skipped: usize,
+}
+
+#[tauri::command]
+pub async fn import_history(contents: String, state: State<'_, AppState>) -> Result<ImportResult> {
+    let parsed = crate::history::parse(&contents)?;
+    let mut core = state.core.lock().await;
+    let imported = core.store.import_history(&parsed.entries)?;
+    Ok(ImportResult {
+        imported,
+        duplicates: parsed.entries.len() - imported,
+        skipped: parsed.skipped,
+    })
+}
+
+#[tauri::command]
+pub async fn imported_history(
+    offset: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::history::ImportedPlay>> {
+    state.core.lock().await.store.history_page(offset)
 }
 
 #[tauri::command]

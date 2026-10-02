@@ -9,13 +9,14 @@ A Windows desktop application for collecting, playing, and curating YouTube play
 ## Features
 
 - Local playlists with YouTube link import, library search, and track context menus.
-- Google sign-in through your browser; import owned YouTube playlists, create private playlists, and add or remove entries.
+- Google sign-in through your browser; import owned YouTube playlists, create private playlists, rename or delete playlists, and add or remove entries.
 - Auto All curation rules merge source playlists into a target without duplicates. Tracks remain managed while any source references them; manually added entries are preserved.
 - Preview curation changes before applying them, or enable periodic background synchronization.
 - YouTube's embedded player, playback controls, and a local listening history.
+- Local Google Takeout watch-history import with duplicate detection and browsing.
 - Optional Discord Rich Presence, a system tray menu, and signed application updates in configured release builds.
 
-Resonance uses the YouTube Data API, not an unofficial YouTube Music API. Album libraries, recommendations, subscription downloads, and YouTube Music's full account history are not available. Some videos cannot be embedded; open those tracks in YouTube Music. Playlist deletion on YouTube is managed on YouTube itself.
+Resonance uses the YouTube Data API, not an unofficial YouTube Music API. Album libraries, recommendations, subscription downloads, and YouTube Music's full account history are not available. Some videos cannot be embedded; open those tracks in YouTube Music.
 
 ## Installation
 
@@ -90,7 +91,7 @@ Resonance has no telemetry or hosted backend. Playlist data, settings, and liste
 
 YouTube receives video metadata, thumbnail, and playback requests. Account operations go directly to Google's APIs. Discord receives the current track only when Rich Presence is enabled. Configured release builds contact GitHub to check for updates.
 
-Listening statistics cover time observed in the embedded player, in short intervals. They do not import your Google history or track playback in other applications. History can be cleared in the application. Disconnect Google and revoke its grant in your Google account to remove access fully.
+Listening statistics cover time observed in the embedded player, in short intervals. They do not track playback in other applications. Under Listening history → Google history, import a Google Takeout `watch-history.json` export (up to 20 MB and 50,000 entries per import). Imported events stay local, are deduplicated by video and timestamp, and do not add listening duration. Clearing history removes both local statistics and imported events. Disconnect Google and revoke its grant in your Google account to remove access fully.
 
 ## Contributing
 

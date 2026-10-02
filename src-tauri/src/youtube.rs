@@ -130,6 +130,33 @@ impl YoutubeClient {
         })
     }
 
+    pub async fn rename_playlist(&self, id: &str, name: &str) -> Result<()> {
+        let response = self
+            .request(
+                Method::GET,
+                "playlists",
+                &[("part", "snippet"), ("id", id)],
+                None,
+            )
+            .await?;
+        let current = response["items"]
+            .as_array()
+            .and_then(|items| items.first())
+            .ok_or_else(|| {
+                message("This YouTube playlist is no longer available. Refresh your library.")
+            })?;
+        let body = rename_body(current, name)?;
+        self.request(Method::PUT, "playlists", &[("part", "snippet")], Some(body))
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_playlist(&self, id: &str) -> Result<()> {
+        self.request(Method::DELETE, "playlists", &[("id", id)], None)
+            .await?;
+        Ok(())
+    }
+
     pub async fn insert(&self, playlist_id: &str, video_id: &str) -> Result<String> {
         let item = self.request(Method::POST, "playlistItems", &[("part", "snippet")], Some(json!({ "snippet": { "playlistId": playlist_id, "resourceId": { "kind": "youtube#video", "videoId": video_id } } }))).await?;
         item["id"].as_str().map(String::from).ok_or_else(|| message("YouTube didn't return the inserted item ID. Sync your library before trying again."))
@@ -140,6 +167,24 @@ impl YoutubeClient {
             .await?;
         Ok(())
     }
+}
+
+fn rename_body(current: &Value, name: &str) -> Result<Value> {
+    let id = current["id"].as_str().ok_or_else(|| {
+        message("YouTube returned an incomplete playlist. Refresh and try again.")
+    })?;
+    let snippet = current["snippet"].as_object().ok_or_else(|| {
+        message("YouTube returned an incomplete playlist. Refresh and try again.")
+    })?;
+    // Updating snippet replaces omitted writable fields, including the description.
+    let mut next = serde_json::Map::new();
+    next.insert("title".into(), Value::String(name.into()));
+    for key in ["description", "defaultLanguage"] {
+        if let Some(value) = snippet.get(key) {
+            next.insert(key.into(), value.clone());
+        }
+    }
+    Ok(json!({ "id": id, "snippet": next }))
 }
 
 fn parse_track(item: &Value) -> Result<Track> {
@@ -206,6 +251,16 @@ pub async fn metadata(id: &str) -> Result<Track> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn renaming_preserves_writable_metadata_without_changing_privacy() {
+        let current = json!({"id": "playlist", "snippet": {"title": "Old", "description": "Keep this", "defaultLanguage": "de", "channelId": "owner"}, "status": {"privacyStatus": "private"}});
+        assert_eq!(
+            rename_body(&current, "New").unwrap(),
+            json!({"id": "playlist", "snippet": {"title": "New", "description": "Keep this", "defaultLanguage": "de"}})
+        );
+        assert!(rename_body(&json!({"id": "playlist"}), "New").is_err());
+    }
 
     #[test]
     fn preserves_private_video_references_and_item_ids() {

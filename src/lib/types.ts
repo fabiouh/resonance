@@ -44,11 +44,17 @@ export interface Library {
 }
 
 export interface Snapshot {
+  importedHistoryCount: number;
   library: Library;
   connected: boolean;
   syncError: string | null;
   updaterConfigured: boolean;
   googleSecretConfigured: boolean;
+}
+
+export interface ImportedPlay {
+  track: Track;
+  playedAt: number;
 }
 
 export interface PlaylistDiff {

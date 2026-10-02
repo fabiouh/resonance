@@ -16,11 +16,11 @@
     ArrowUpRight,
     Music2,
     X,
-    Trash2,
   } from '@lucide/svelte';
   import { call, desktop, errorMessage, snapshot } from './lib/api';
   import { allTracks, filterTracks, videoId } from './lib/library';
-  import type { Snapshot, Track, Playlist } from './lib/types';
+  import type { Snapshot, Track } from './lib/types';
+  import PlaylistActions from './components/PlaylistActions.svelte';
   import TrackList from './components/TrackList.svelte';
   import Player from './components/Player.svelte';
   import Modal from './components/Modal.svelte';
@@ -44,7 +44,6 @@
   let addId = $state('');
   let trackUrl = $state('');
   let removing = $state<Track | null>(null);
-  let deleting = $state<Playlist | null>(null);
   let searchInput: HTMLInputElement;
   let selected = $derived(data?.library.playlists.find((p) => p.id === page));
   let tracks = $derived(
@@ -285,6 +284,7 @@
         />
       {:else if page === 'history'}<StatsView
           history={data.library.listening}
+          importedCount={data.importedHistoryCount}
           {play}
           {run}
         />
@@ -306,12 +306,11 @@
             </p>
           </div>
           <div class="button-row">
-            {#if selected && !selected.remoteId}<button
-                class="icon-button"
-                aria-label="Delete playlist"
-                onclick={() => (deleting = selected ?? null)}
-                ><Trash2 size={17} /></button
-              >{/if}<button
+            {#if selected}<PlaylistActions
+                playlist={selected}
+                {run}
+                deleted={() => navigate('library')}
+              />{/if}<button
               class="primary"
               onclick={() => {
                 if (selected) addTo();
@@ -516,29 +515,6 @@
           )
             removing = null;
         }}>Remove track</button
-      >
-    </div></Modal
-  >{/if}
-{#if deleting}<Modal title="Delete playlist?" close={() => (deleting = null)}
-    ><p>
-      Delete the local playlist “{deleting.name}”? Other playlists are
-      unaffected.
-    </p>
-    <div class="dialog-actions">
-      <button onclick={() => (deleting = null)}>Cancel</button><button
-        class="danger"
-        disabled={busy}
-        onclick={async () => {
-          if (
-            await run(
-              () => call('delete_playlist', { id: deleting?.id }),
-              'Playlist deleted',
-            )
-          ) {
-            deleting = null;
-            page = 'library';
-          }
-        }}>Delete playlist</button
       >
     </div></Modal
   >{/if}
