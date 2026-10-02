@@ -15,5 +15,9 @@ runs:
     - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
       with:
         workspaces: src-tauri -> target
+        cache-on-failure: true
     - run: pnpm install --frozen-lockfile
+      shell: pwsh
+    - name: Ensure WebView2 Runtime
+      run: ./scripts/setup-webview.ps1
       shell: pwsh

@@ -29,9 +29,13 @@ const child = spawn(binary, [], {
     RESONANCE_TEST_DATA_DIR: profile,
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
   },
-  stdio: 'ignore',
+  stdio: ['ignore', 'ignore', 'pipe'],
 });
 let launchError;
+let diagnostics = '';
+child.stderr.on('data', (chunk) => {
+  diagnostics = (diagnostics + chunk.toString()).slice(-16000);
+});
 const stopped = new Promise((resolve) => child.once('close', resolve));
 child.on('error', (error) => {
   launchError = error;
@@ -39,17 +43,33 @@ child.on('error', (error) => {
 let browser;
 try {
   const endpoint = `http://127.0.0.1:${port}`;
-  for (let attempt = 0; attempt < 60; attempt++) {
+  let ready = false;
+  for (let attempt = 0; attempt < 120; attempt++) {
     if (launchError) throw launchError;
     if (child.exitCode !== null)
-      throw new Error(`Application exited during startup (${child.exitCode}).`);
+      throw new Error(
+        `Application exited during startup (${child.exitCode}). ${diagnostics}`,
+      );
     try {
-      if ((await fetch(`${endpoint}/json/version`)).ok) break;
+      if (
+        (
+          await fetch(`${endpoint}/json/version`, {
+            signal: AbortSignal.timeout(1000),
+          })
+        ).ok
+      ) {
+        ready = true;
+        break;
+      }
     } catch {
       /* WebView2 starts asynchronously. */
     }
     await delay(500);
   }
+  if (!ready)
+    throw new Error(
+      `WebView2 did not expose its test endpoint. Check the WebView2 Runtime and application startup. ${diagnostics}`,
+    );
   browser = await chromium.connectOverCDP(endpoint);
   const context = browser.contexts()[0];
   let page;
